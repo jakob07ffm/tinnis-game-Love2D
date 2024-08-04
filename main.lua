@@ -1,6 +1,6 @@
 local paddle_speed = 400
 local initial_ball_speed = 300
-local ball_speed_increment = 20
+local ball_speed_increment = 50
 local paddle_width, paddle_height = 20, 100
 local ball_size = 20
 local winning_score = 5
@@ -8,10 +8,13 @@ local winning_score = 5
 local player1_y, player2_y
 local ball_x, ball_y, ball_dx, ball_dy
 local player1_score, player2_score
-local is_game_over
+local is_game_over, is_paused, show_title_screen
+local ai_difficulty = 1
+
+local sounds = {}
 
 function love.load()
-    love.window.setTitle("Tennis Game")
+    love.window.setTitle("Advanced Tennis Game")
     love.window.setMode(800, 600)
     love.graphics.setBackgroundColor(0.1, 0.1, 0.1)
     player1_y = (love.graphics.getHeight() - paddle_height) / 2
@@ -20,9 +23,14 @@ function love.load()
     player1_score = 0
     player2_score = 0
     is_game_over = false
+    is_paused = false
+    show_title_screen = true
 
-    paddle_hit_sound = love.audio.newSource("paddle_hit.wav", "static")
-    score_sound = love.audio.newSource("score.wav", "static")
+    sounds.paddle_hit = love.audio.newSource("paddle_hit.wav", "static")
+    sounds.score = love.audio.newSource("score.wav", "static")
+    sounds.background = love.audio.newSource("background.mp3", "stream")
+    sounds.background:setLooping(true)
+    love.audio.play(sounds.background)
 end
 
 function reset_ball()
@@ -33,6 +41,20 @@ function reset_ball()
 end
 
 function love.update(dt)
+    if show_title_screen then
+        if love.keyboard.isDown("return") then
+            show_title_screen = false
+        end
+        return
+    end
+
+    if is_paused then
+        if love.keyboard.isDown("p") then
+            is_paused = false
+        end
+        return
+    end
+
     if is_game_over then
         if love.keyboard.isDown("space") then
             player1_score = 0
@@ -43,6 +65,10 @@ function love.update(dt)
         return
     end
 
+    if love.keyboard.isDown("p") then
+        is_paused = true
+    end
+
     if love.keyboard.isDown("w") then
         player1_y = math.max(0, player1_y - paddle_speed * dt)
     elseif love.keyboard.isDown("s") then
@@ -50,9 +76,9 @@ function love.update(dt)
     end
 
     if ball_y + ball_size / 2 < player2_y + paddle_height / 2 then
-        player2_y = math.max(0, player2_y - paddle_speed * dt)
+        player2_y = math.max(0, player2_y - paddle_speed * dt * ai_difficulty)
     elseif ball_y + ball_size / 2 > player2_y + paddle_height / 2 then
-        player2_y = math.min(love.graphics.getHeight() - paddle_height, player2_y + paddle_speed * dt)
+        player2_y = math.min(love.graphics.getHeight() - paddle_height, player2_y + paddle_speed * dt * ai_difficulty)
     end
 
     ball_x = ball_x + ball_dx * dt
@@ -64,27 +90,27 @@ function love.update(dt)
 
     if ball_x <= paddle_width and ball_y + ball_size >= player1_y and ball_y <= player1_y + paddle_height then
         ball_dx = -ball_dx
-        local hit_pos = (ball_y + ball_size / 2) - (player1_y + paddle_height / 2)
-        ball_dy = ball_dy + hit_pos * 5
-        love.audio.play(paddle_hit_sound)
+        ball_dx = ball_dx + ball_speed_increment
+        ball_dy = ball_dy + (ball_y + ball_size / 2 - player1_y - paddle_height / 2) * 5
+        love.audio.play(sounds.paddle_hit)
     end
 
     if ball_x + ball_size >= love.graphics.getWidth() - paddle_width and ball_y + ball_size >= player2_y and ball_y <= player2_y + paddle_height then
         ball_dx = -ball_dx
-        local hit_pos = (ball_y + ball_size / 2) - (player2_y + paddle_height / 2)
-        ball_dy = ball_dy + hit_pos * 5
-        love.audio.play(paddle_hit_sound)
+        ball_dx = ball_dx - ball_speed_increment
+        ball_dy = ball_dy + (ball_y + ball_size / 2 - player2_y - paddle_height / 2) * 5
+        love.audio.play(sounds.paddle_hit)
     end
 
     if ball_x < 0 then
         player2_score = player2_score + 1
-        love.audio.play(score_sound)
+        love.audio.play(sounds.score)
         reset_ball()
     end
 
     if ball_x > love.graphics.getWidth() then
         player1_score = player1_score + 1
-        love.audio.play(score_sound)
+        love.audio.play(sounds.score)
         reset_ball()
     end
 
@@ -94,6 +120,11 @@ function love.update(dt)
 end
 
 function love.draw()
+    if show_title_screen then
+        love.graphics.printf("Welcome to Advanced Tennis Game\nPress Enter to Start\nW/S to move, P to pause", 0, love.graphics.getHeight() / 2 - 50, love.graphics.getWidth(), "center")
+        return
+    end
+
     love.graphics.setColor(1, 1, 1)
     love.graphics.rectangle("fill", 0, player1_y, paddle_width, paddle_height)
     love.graphics.rectangle("fill", love.graphics.getWidth() - paddle_width, player2_y, paddle_width, paddle_height)
@@ -103,5 +134,9 @@ function love.draw()
 
     if is_game_over then
         love.graphics.printf("Game Over! Press Space to Restart", 0, love.graphics.getHeight() / 2 - 10, love.graphics.getWidth(), "center")
+    end
+
+    if is_paused then
+        love.graphics.printf("Paused - Press P to Resume", 0, love.graphics.getHeight() / 2 - 10, love.graphics.getWidth(), "center")
     end
 end
