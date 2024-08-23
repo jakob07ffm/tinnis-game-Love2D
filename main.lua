@@ -11,8 +11,6 @@ local player1_score, player2_score
 local is_game_over, is_paused, show_title_screen
 local ai_difficulty = 1
 
-local sounds = {}
-
 function love.load()
     love.window.setTitle("Advanced Tennis Game")
     love.window.setMode(800, 600)
@@ -25,12 +23,6 @@ function love.load()
     is_game_over = false
     is_paused = false
     show_title_screen = true
-
-    sounds.paddle_hit = love.audio.newSource("paddle_hit.wav", "static")
-    sounds.score = love.audio.newSource("score.wav", "static")
-    sounds.background = love.audio.newSource("background.mp3", "stream")
-    sounds.background:setLooping(true)
-    love.audio.play(sounds.background)
 end
 
 function reset_ball()
@@ -90,27 +82,23 @@ function love.update(dt)
 
     if ball_x <= paddle_width and ball_y + ball_size >= player1_y and ball_y <= player1_y + paddle_height then
         ball_dx = -ball_dx
-        ball_dx = ball_dx + ball_speed_increment
+        ball_dx = ball_dx - ball_speed_increment
         ball_dy = ball_dy + (ball_y + ball_size / 2 - player1_y - paddle_height / 2) * 5
-        love.audio.play(sounds.paddle_hit)
     end
 
     if ball_x + ball_size >= love.graphics.getWidth() - paddle_width and ball_y + ball_size >= player2_y and ball_y <= player2_y + paddle_height then
         ball_dx = -ball_dx
-        ball_dx = ball_dx - ball_speed_increment
+        ball_dx = ball_dx + ball_speed_increment
         ball_dy = ball_dy + (ball_y + ball_size / 2 - player2_y - paddle_height / 2) * 5
-        love.audio.play(sounds.paddle_hit)
     end
 
     if ball_x < 0 then
         player2_score = player2_score + 1
-        love.audio.play(sounds.score)
         reset_ball()
     end
 
     if ball_x > love.graphics.getWidth() then
         player1_score = player1_score + 1
-        love.audio.play(sounds.score)
         reset_ball()
     end
 
